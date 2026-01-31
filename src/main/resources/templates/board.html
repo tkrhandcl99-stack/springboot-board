@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>자유게시판</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { width: 900px; margin: 0 auto; }
+        .board-title { font-size: 28px; font-weight: 800; margin-bottom: 6px; text-align:center; }
+        .board-desc { color: #666; font-size: 14px; margin-bottom: 18px; text-align:center; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .search-box { display: flex; gap: 6px; align-items: center; }
+
+        select, input { height: 32px; padding: 0 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { height: 32px; padding: 0 12px; border: 1px solid #bbb; background: #f7f7f7; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #eee; }
+        .btn-primary { border: 1px solid #007bff; background: #007bff; color: white; }
+        .btn-primary:hover { background: #0069d9; }
+        .btn-danger { border: 1px solid #dc3545; background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+
+        table { width: 100%; border-collapse: collapse; border-top: 2px solid #333; }
+        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px; }
+        th { background: #fafafa; font-weight: 700; }
+        td.title { text-align: left; cursor: pointer; }
+        td.title:hover { text-decoration: underline; }
+
+        .paging { display: flex; justify-content: center; gap: 6px; margin-top: 14px; align-items: center; }
+        .page-btn { border: 1px solid #ccc; background: white; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        .page-btn:hover { background: #f3f3f3; }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .detail-box { margin-top: 18px; border: 1px solid #ddd; border-radius: 6px; padding: 14px; background: #fcfcfc; }
+        .detail-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+
+        .write-box { border: 1px solid #ddd; border-radius: 6px; padding: 14px; margin-top: 18px; background: #fcfcfc; display:none; }
+        .write-box input, .write-box textarea { width: 100%; box-sizing: border-box; }
+        textarea { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+
+        .write-actions { margin-top: 10px; display: flex; gap: 8px; }
+        .right-actions { display: flex; gap: 8px; }
+        .detail-actions { margin-top: 10px; display:flex; gap: 8px; }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="board-title">자유게시판</div>
+    <div class="board-desc">자유롭게 글을 쓸 수 있는 게시판입니다.</div>
+
+    <div class="top-bar">
+        <div class="search-box">
+            <select id="searchType">
+                <option value="all">전체</option>
+                <option value="title">제목</option>
+                <option value="content">내용</option>
+            </select>
+            <input id="queryInput" placeholder="검색어를 입력하세요" style="width:260px;" />
+            <button class="btn" id="searchBtn">검색</button>
+            <button class="btn" id="resetBtn">초기화</button>
+        </div>
+        <div class="right-actions">
+            <button class="btn btn-primary" id="openWriteBtn">글쓰기</button>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th style="width:80px;">번호</th>
+            <th>제목</th>
+            <th style="width:160px;">작성일</th>
+        </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+
+    <div class="paging">
+        <button class="page-btn" id="firstBtn">처음</button>
+        <button class="page-btn" id="prevBtn">이전</button>
+        <span id="pageInfo"></span>
+        <button class="page-btn" id="nextBtn">다음</button>
+        <button class="page-btn" id="lastBtn">마지막</button>
+    </div>
+
+    <div class="detail-box" id="detailBox">
+        <div class="detail-title">상세</div>
+        <div class="detail-content">게시글을 클릭하면 상세가 여기에 표시됩니다.</div>
+    </div>
+
+    <div class="write-box" id="writeBox">
+        <h3>글쓰기</h3>
+        <input id="titleInput" placeholder="제목" />
+        <br/><br/>
+        <textarea id="contentInput" placeholder="내용" rows="8"></textarea>
+
+        <div class="write-actions">
+            <button class="btn btn-primary" id="saveBtn">등록</button>
+            <button class="btn" id="closeWriteBtn">닫기</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const searchType = document.getElementById("searchType");
+    const queryInput = document.getElementById("queryInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const openWriteBtn = document.getElementById("openWriteBtn");
+    const closeWriteBtn = document.getElementById("closeWriteBtn");
+    const writeBox = document.getElementById("writeBox");
+
+    const titleInput = document.getElementById("titleInput");
+    const contentInput = document.getElementById("contentInput");
+    const saveBtn = document.getElementById("saveBtn");
+
+    const tableBody = document.getElementById("tableBody");
+
+    const firstBtn = document.getElementById("firstBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const lastBtn = document.getElementById("lastBtn");
+    const pageInfo = document.getElementById("pageInfo");
+
+    const detailBox = document.getElementById("detailBox");
+
+    // ====== 상태 ======
+    let currentQuery = "";
+    let currentPage = 0;
+    const pageSize = 5;
+    let totalPages = 1;
+
+    // ====== 글쓰기 토글 ======
+    function openWriteMode() {
+      writeBox.style.display = "block";
+      titleInput.focus();
+    }
+    function closeWriteMode() {
+      writeBox.style.display = "none";
+      titleInput.value = "";
+      contentInput.value = "";
+    }
+    openWriteBtn.addEventListener("click", openWriteMode);
+    closeWriteBtn.addEventListener("click", closeWriteMode);
+
+    // ====== 목록 불러오기 ======
+    async function loadPosts() {
+      tableBody.innerHTML = `
+        <tr><td colspan="3" style="padding:20px;">불러오는 중...</td></tr>
+      `;
+
+      const params = new URLSearchParams();
+      params.append("page", currentPage);
+      params.append("size", pageSize);
+
+      if (currentQuery && currentQuery.trim() !== "") {
+        params.append("query", currentQuery);
+      }
+
+      const res = await fetch(`/api/posts?${params.toString()}`);
+      if (!res.ok) {
+        tableBody.innerHTML = `
+          <tr><td colspan="3" style="padding:20px;">요청 실패: ${res.status}</td></tr>
+        `;
+        return;
+      }
+
+      const pageData = await res.json();
+      const data = pageData.content;
+
+      totalPages = pageData.totalPages;
+      pageInfo.textContent = `${pageData.number + 1} / ${totalPages}`;
+
+      firstBtn.disabled = pageData.first;
+      prevBtn.disabled = pageData.first;
+      nextBtn.disabled = pageData.last;
+      lastBtn.disabled = pageData.last;
+
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = `
+          <tr><td colspan="3" style="padding:20px;">게시글이 없습니다.</td></tr>
+        `;
+        return;
+      }
+
+      tableBody.innerHTML = data.map((p, idx) => {
+        const displayNo = pageData.number * pageData.size + idx + 1;
+        return `
+          <tr>
+            <td>${displayNo}</td>
+            <td class="title" onclick="loadDetail(${p.id})">${escapeHtml(p.title)}</td>
+            <td>${formatDate(p.createdAt)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // ====== 상세 ======
+    async function loadDetail(id) {
+      detailBox.innerHTML = `
+        <div class="detail-title">상세</div>
+        <div class="detail-content">상세 불러오는 중...</div>
+      `;
+
+      const res = await fetch(`/api/posts/${id}`);
+      if (!res.ok) {
+        detailBox.innerHTML = `
+          <div class="detail-title">상세</div>
+          <div class="detail-content">상세 요청 실패: ${res.status}</div>
+        `;
+        return;
+      }
+
+      const p = await res.json();
+
+      detailBox.innerHTML = `
+        <div class="detail-title">${escapeHtml(p.title)}</div>
+        <div class="detail-content" style="white-space:pre-wrap;">${escapeHtml(p.content)}</div>
+        <small>작성일: ${formatDate(p.createdAt)}</small>
+        <div class="detail-actions">
+          <button class="btn btn-danger" onclick="deletePost(${p.id})">삭제</button>
+        </div>
+      `;
+    }
+
+    window.loadDetail = loadDetail;
+
+    // ====== 삭제 ======
+    async function deletePost(id) {
+      if (!confirm("정말 삭제할까요?")) return;
+
+      const res = await fetch(`/api/posts/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert("삭제 실패 상태코드: " + res.status);
+        return;
+      }
+
+      detailBox.innerHTML = `
+        <div class="detail-title">상세</div>
+        <div class="detail-content">게시글을 클릭하면 상세가 여기에 표시됩니다.</div>
+      `;
+
+      // 현재 페이지 유지한 채 갱신 (마지막 글 삭제로 페이지가 비면 한 페이지 앞으로)
+      await loadPosts();
+      if (currentPage > 0) {
+        const checkRes = await fetch(`/api/posts?page=${currentPage}&size=${pageSize}&query=${encodeURIComponent(currentQuery || "")}`);
+        const checkPage = await checkRes.json();
+        if (checkPage.content.length === 0) {
+          currentPage--;
+          await loadPosts();
+        }
+      }
+    }
+
+    window.deletePost = deletePost;
+
+    // ====== 검색/초기화 ======
+    searchBtn.addEventListener("click", async () => {
+      currentQuery = queryInput.value.trim();
+      currentPage = 0;
+      await loadPosts();
+    });
+
+    resetBtn.addEventListener("click", async () => {
+      currentQuery = "";
+      currentPage = 0;
+      queryInput.value = "";
+      await loadPosts();
+    });
+
+    // ====== 페이징 ======
+    firstBtn.addEventListener("click", async () => {
+      currentPage = 0;
+      await loadPosts();
+    });
+
+    prevBtn.addEventListener("click", async () => {
+      if (currentPage > 0) {
+        currentPage--;
+        await loadPosts();
+      }
+    });
+
+    nextBtn.addEventListener("click", async () => {
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        await loadPosts();
+      }
+    });
+
+    lastBtn.addEventListener("click", async () => {
+      if (totalPages > 0) {
+        currentPage = totalPages - 1;
+        await loadPosts();
+      }
+    });
+
+    // ====== 글 등록 ======
+    saveBtn.addEventListener("click", async () => {
+      const title = titleInput.value.trim();
+      const content = contentInput.value.trim();
+
+      if (!title || !content) {
+        alert("제목/내용을 모두 입력하세요");
+        return;
+      }
+
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content })
+      });
+
+      if (!res.ok) {
+        alert("저장 실패 상태코드: " + res.status);
+        return;
+      }
+
+      closeWriteMode();
+      currentPage = 0; // 최신글이 맨 위로 오게 1페이지로 이동
+      await loadPosts();
+    });
+
+    function formatDate(isoString) {
+      if (!isoString) return "";
+      return String(isoString).substring(0, 10);
+    }
+
+    function escapeHtml(str) {
+      return (str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // 첫 진입 자동 로딩
+    loadPosts();
+</script>
+</body>
+</html>

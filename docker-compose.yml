@@ -1,0 +1,10 @@
+services:
+  db:
+    image: postgres:16
+    container_name: board_pg
+    environment:
+      POSTGRES_DB: board
+      POSTGRES_USER: boarduser
+      POSTGRES_PASSWORD: boardpass
+    ports:
+      - "5432:5432"
