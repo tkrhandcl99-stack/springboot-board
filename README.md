@@ -81,14 +81,6 @@ http://localhost:8080/board
 <img width="1240" height="701" alt="image" src="https://github.com/user-attachments/assets/f722ea19-641b-42ca-930d-92024e39f7b4" />
 <img width="1096" height="910" alt="image" src="https://github.com/user-attachments/assets/fc3f4cef-b2f3-496a-b0d6-7a7839297e0f" />
 
-## API Endpoints
-| Method | URL | Description |
-|---|---|---|
-| GET | /api/posts?page=&size=&query= | 목록(검색/페이징) |
-| GET | /api/posts/{id} | 상세 조회 |
-| POST | /api/posts | 작성 |
-| DELETE | /api/posts/{id} | 삭제 |
-
 ## Key Points
 - 새로고침 없이(fetch)로 화면을 갱신해 SPA 느낌으로 동작합니다.
 - 최신 글이 위로 오도록 정렬(DESC)을 적용했습니다.
