@@ -57,3 +57,39 @@ docker compose up -d
 \# 또는 구버전이면
 
 docker-compose up -d
+
+
+
+
+# Spring Boot 1페이지 게시판 (AJAX + PostgreSQL Docker)
+
+단일 페이지에서 AJAX로 목록/상세/검색/페이징/작성/삭제가 동작하는 게시판입니다.  
+DB는 Docker로 PostgreSQL을 실행해서 로컬에서 재현 가능하게 구성했습니다.
+
+## How to Run
+
+### 1) DB 실행 (Docker)
+docker compose up -d
+
+### 2) Spring Boot 실행
+IntelliJ에서 DemoApplication 실행
+
+### 3) 접속
+http://localhost:8080/board
+
+<img width="1260" height="672" alt="image" src="https://github.com/user-attachments/assets/0fc74e58-96ff-4871-abd8-e5d114865eea" />
+<img width="1240" height="701" alt="image" src="https://github.com/user-attachments/assets/f722ea19-641b-42ca-930d-92024e39f7b4" />
+<img width="1096" height="910" alt="image" src="https://github.com/user-attachments/assets/fc3f4cef-b2f3-496a-b0d6-7a7839297e0f" />
+
+## API Endpoints
+| Method | URL | Description |
+|---|---|---|
+| GET | /api/posts?page=&size=&query= | 목록(검색/페이징) |
+| GET | /api/posts/{id} | 상세 조회 |
+| POST | /api/posts | 작성 |
+| DELETE | /api/posts/{id} | 삭제 |
+
+## Key Points
+- 새로고침 없이(fetch)로 화면을 갱신해 SPA 느낌으로 동작합니다.
+- 최신 글이 위로 오도록 정렬(DESC)을 적용했습니다.
+- DB id는 삭제 후 재사용되지 않으므로 화면용 번호(순번)는 별도로 계산해 표시했습니다.
